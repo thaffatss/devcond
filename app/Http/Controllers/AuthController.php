@@ -19,7 +19,7 @@ class AuthController extends Controller
 
     public function register(Request $request) {
         $array = ['error' => ''];
-
+        // Valida dados do usuário.
         $validator = Validator::make($request->all(), [
             'name' =>  'required',
             'email' => 'required|email|unique:users,email', // unique:users, email(verifica se existe um usuário com o mesmo email cadastrado, caso tenha já barra o processo).
@@ -81,6 +81,58 @@ class AuthController extends Controller
              $array['error'] = $validator->errors()->first();
              return $array;
          }
+
+        return $array;
+    }
+    // Metodo para fazer login.
+    public function login(Request $request) {
+        // Estrutura para retorno de error.
+        $array = ['error' => ''];
+        
+        // Valida os dados.
+        $validator = Validator::make($request->all(), [
+            'cpf' => 'required|digits:11',
+            'password' => 'required'
+        ]);
+        
+        // Verifica se a validação não teve nenhum falha.
+        if(!$validator->fails()) {
+            // Pega os dados do para login do usário.
+            $cpf = $request->input('cpf');
+            $password = $request->input('password');
+
+            
+             $token = auth()->attempt([
+                'cpf' => $cpf,
+                'password' => $password
+            ]);
+            
+            // Verifica se token não ta vazio.
+            if(!$token) {
+                $array['error'] = 'CPF e/ou Senha estão errados.';
+                return $array;
+            }
+
+            // Adiciona o token do usuário a um array de resposta.
+            $array['token'] = $token;
+
+            // Precisa-se adicionar as informações desse usuário e as propriedades do mesmo.
+            // que no caso são as unidades que estão associadas a esse usuário.
+            $user = auth()->user();
+            $array['user'] = $user;
+
+            // Pega as propriedades do usuário.
+            $properties = Unit::select(['id', 'name'])
+            ->where('id_owner', $user['id'])
+            ->get();
+
+            // E adiciona as propriedades.
+            $array['user']['properties'] = $properties;
+
+        } else {
+            $array['error'] = $validator->errors()->first();
+            return $array;
+        }
 
         return $array;
     }
